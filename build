@@ -47,8 +47,7 @@ PATH="${WORK}/clang/bin:${WORK}/x64/bin:${WORK}/x32/bin:/bin"
 # Enter Kernel root directory
 cd "${KERNEL_SRC}" || exit 1
 
-# KernelSU - Disable if not building one.
-# curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
+# Настройка конфига под адаптер (твои правки)
 sed -i 's/# CONFIG_RT2800USB is not set/CONFIG_RT2800USB=y/g' arch/arm64/configs/vayu_defconfig
 echo "CONFIG_RT2X00=y" >> arch/arm64/configs/vayu_defconfig
 echo "CONFIG_RT2800USB_RT53XX=y" >> arch/arm64/configs/vayu_defconfig
@@ -57,4 +56,4 @@ echo "CONFIG_NL80211_TESTMODE=y" >> arch/arm64/configs/vayu_defconfig
 
 # Start Compiling Kernel
 make_fun "${KERNEL_DEFCONFIG}"
-make_fun -j"$(nproc --all)" 2>&1 | tee build.log 
+make_fun -j"$(nproc --all)" 2>&1 | tee build.log
