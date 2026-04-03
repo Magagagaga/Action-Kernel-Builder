@@ -4,7 +4,6 @@ set -e -x
 
 # Kernel Source
 KERNEL_SOURCE="https://github.com/LineageOS/android_kernel_xiaomi_vayu"
-KERNEL_BRANCH="lineage-22.2"
 KERNEL_DEFCONFIG="vayu_defconfig"
 
 # Prebuilt Clang Toolchain (AOSP)
@@ -34,6 +33,14 @@ KERNEL_SRC="${WORK}/${KERNEL}"
 # Prepare Directory
 mkdir -p "${WORK}"
 cd "${WORK}" || exit 1
+
+# Cloning all the Necessary files
+if [ ! -d clang ]; then mkdir clang && curl -Lsq "${CLANG_URL}" -o clang.tgz && tar -xzf clang.tgz -C clang; fi
+[ ! -d x64 ] && git clone --depth=1 "${GCC_x64}" -b "${GCC_BRANCH}" ./x64
+[ ! -d x32 ] && git clone --depth=1 "${GCC_x32}" -b "${GCC_BRANCH}" ./x32
+[ ! -d "${KERNEL}" ] && git clone --depth=1 "${KERNEL_SOURCE}" "${KERNEL}"
+
+# Setting Toolchain Path
 
 # Cloning all the Necessary files
 if [ ! -d clang ]; then mkdir clang && curl -Lsq "${CLANG_URL}" -o clang.tgz && tar -xzf clang.tgz -C clang; fi
