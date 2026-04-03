@@ -4,15 +4,16 @@ on:
   workflow_dispatch:
     inputs:
       DEVICE_NAME:
-        description: 'Your device codename.'
+        description: 'vayu'
         required: true
-        default: ''
+        default: 'vayu'
       ANDROID_VERSION:
-        description: 'Your android version.'
+        description: '14'
         required: true
-        default: ''
+        default: 'u-oss'
         type: choice
         options:
+        - u-oss
         - t-oss
         - s-oss
         - r-oss
