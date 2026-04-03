@@ -23,11 +23,7 @@ make_fun() {
 
 # Work Path
 WORK="${HOME}/work"
-
-# Kernel Folder Name
 KERNEL="myKernel"
-
-# Kernel Source Path
 KERNEL_SRC="${WORK}/${KERNEL}"
 
 # Prepare Directory
@@ -41,26 +37,32 @@ if [ ! -d clang ]; then mkdir clang && curl -Lsq "${CLANG_URL}" -o clang.tgz && 
 [ ! -d "${KERNEL}" ] && git clone --depth=1 "${KERNEL_SOURCE}" "${KERNEL}"
 
 # Setting Toolchain Path
-
-# Cloning all the Necessary files
-if [ ! -d clang ]; then mkdir clang && curl -Lsq "${CLANG_URL}" -o clang.tgz && tar -xzf clang.tgz -C clang; fi
-[ ! -d x64 ] && git clone --depth=1 "${GCC_x64}" -b "${GCC_BRANCH}" ./x64
-[ ! -d x32 ] && git clone --depth=1 "${GCC_x32}" -b "${GCC_BRANCH}" ./x32
-[ ! -d "${KERNEL}" ] && git clone --depth=1 "${KERNEL_SOURCE}" -b "${KERNEL_BRANCH}" "${KERNEL}"
-
-# Setting Toolchain Path
 PATH="${WORK}/clang/bin:${WORK}/x64/bin:${WORK}/x32/bin:/bin"
 
 # Enter Kernel root directory
 cd "${KERNEL_SRC}" || exit 1
 
-# Настройка конфига под адаптер (твои правки)
-sed -i 's/# CONFIG_RT2800USB is not set/CONFIG_RT2800USB=y/g' arch/arm64/configs/vayu_defconfig
-echo "CONFIG_RT2X00=y" >> arch/arm64/configs/vayu_defconfig
-echo "CONFIG_RT2800USB_RT53XX=y" >> arch/arm64/configs/vayu_defconfig
-echo "CONFIG_RT2800USB_UNKNOWN=y" >> arch/arm64/configs/vayu_defconfig
-echo "CONFIG_NL80211_TESTMODE=y" >> arch/arm64/configs/vayu_defconfig
+# --- АВТОПОИСК И ПРАВКА КОНФИГА ---
+# Ищем vayu_defconfig во всех подпапках arch/arm64/configs
+REAL_CONF_PATH=$(find arch/arm64/configs -name "vayu_defconfig" | head -n 1)
 
-# Start Compiling Kernel
-make_fun "${KERNEL_DEFCONFIG}"
-make_fun -j"$(nproc --all)" 2>&1 | tee build.log
+if [ -n "$REAL_CONF_PATH" ]; then
+    echo "Нашёл конфиг по пути: $REAL_CONF_PATH"
+    # Добавляем твои настройки для Wi-Fi адаптера
+    sed -i 's/# CONFIG_RT2800USB is not set/CONFIG_RT2800USB=y/g' "$REAL_CONF_PATH"
+    echo "CONFIG_RT2X00=y" >> "$REAL_CONF_PATH"
+    echo "CONFIG_RT2800USB_RT53XX=y" >> "$REAL_CONF_PATH"
+    echo "CONFIG_RT2800USB_UNKNOWN=y" >> "$REAL_CONF_PATH"
+    echo "CONFIG_NL80211_TESTMODE=y" >> "$REAL_CONF_PATH"
+    
+    # Получаем чистое имя для команды make (убираем путь до configs/)
+    MAKE_CONF=$(echo "$REAL_CONF_PATH" | sed 's|arch/arm64/configs/||')
+    
+    # Старт компиляции
+    make_fun "$MAKE_CONF"
+    make_fun -j"$(nproc --all)" 2>&1 | tee build.log
+else
+    echo "ОШИБКА: vayu_defconfig не найден вообще!"
+    find arch/arm64/configs -maxdepth 3
+    exit 1
+fi
