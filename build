@@ -41,32 +41,30 @@ PATH="${WORK}/clang/bin:${WORK}/x64/bin:${WORK}/x32/bin:/bin"
 # Enter Kernel root directory
 cd "${KERNEL_SRC}" || exit 1
 
-# --- УМНЫЙ ПОИСК И ПРАВКА КОНФИГА ---
-# Ищем любой файл в конфигах, в названии которого есть "vayu"
-REAL_CONF_PATH=$(find arch/arm64/configs -name "*vayu*" | head -n 1)
+# --- ЖЕСТКИЙ ФИКС КОНФИГА ---
+# Создаем временный файл с твоими правками для Wi-Fi
+cat <<EOF > nethunter.config
+CONFIG_RT2X00=y
+CONFIG_RT2800USB=y
+CONFIG_RT2800USB_RT53XX=y
+CONFIG_RT2800USB_UNKNOWN=y
+CONFIG_NL80211_TESTMODE=y
+EOF
 
-if [ -n "$REAL_CONF_PATH" ]; then
-    echo "Нашёл конфиг: $REAL_CONF_PATH"
-    
-    # Включаем твои настройки для Wi-Fi адаптера (для Нетхантера)
-    sed -i 's/# CONFIG_RT2800USB is not set/CONFIG_RT2800USB=y/g' "$REAL_CONF_PATH"
-    {
-        echo "CONFIG_RT2X00=y"
-        echo "CONFIG_RT2800USB_RT53XX=y"
-        echo "CONFIG_RT2800USB_UNKNOWN=y"
-        echo "CONFIG_NL80211_TESTMODE=y"
-    } >> "$REAL_CONF_PATH"
-    
-    # Получаем имя конфига для команды make (убираем путь до папки configs)
-    MAKE_CONF=$(echo "$REAL_CONF_PATH" | sed 's|arch/arm64/configs/||')
-    
-    # Старт компиляции
-    make_fun "$MAKE_CONF"
-    make_fun -j"$(nproc --all)" 2>&1 | tee build.log
+# Ищем основной конфиг (теперь ищем gki_defconfig, так как 22.2 это Android 15/GKI)
+BASE_CONF=$(find arch/arm64/configs -name "gki_defconfig" | head -n 1)
+VAYU_CONF=$(find arch/arm64/configs -name "*vayu*" | head -n 1)
+
+if [ -n "$VAYU_CONF" ]; then
+    echo "Собираем конфиг из: $VAYU_CONF и правок"
+    # Сначала генерим базу
+    make_fun $(basename "$VAYU_CONF")
+    # А потом накатываем твои правки сверху
+    ARCH=arm64 scripts/kconfig/merge_config.sh -O out out/.config nethunter.config
 else
-    echo "ОШИБКА: vayu вообще не найден в конфигах!"
-    ls -R arch/arm64/configs/
+    echo "Да елки-палки, опять ничего не найдено!"
     exit 1
 fi
-    exit 1
-fi
+
+# Старт компиляции
+make_fun -j"$(nproc --all)" 2>&1 | tee build.log
