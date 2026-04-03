@@ -3,9 +3,9 @@
 set -e -x
 
 # Kernel Source
-KERNEL_SOURCE="https://github.com/carlodandan/android_kernel_realme_sm7125"
-KERNEL_BRANCH="A13"
-KERNEL_DEFCONFIG="vendor/atoll-perf_defconfig"
+KERNEL_SOURCE="https://github.com/LineageOS/android_kernel_xiaomi_vayu"
+KERNEL_BRANCH="lineage-21"
+KERNEL_DEFCONFIG="vayu_defconfig"
 
 # Prebuilt Clang Toolchain (AOSP)
 CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master-kernel-build-2021/clang-r416183b.tar.gz"
@@ -49,6 +49,11 @@ cd "${KERNEL_SRC}" || exit 1
 
 # KernelSU - Disable if not building one.
 # curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
+sed -i 's/# CONFIG_RT2800USB is not set/CONFIG_RT2800USB=y/g' arch/arm64/configs/vayu_defconfig
+echo "CONFIG_RT2X00=y" >> arch/arm64/configs/vayu_defconfig
+echo "CONFIG_RT2800USB_RT53XX=y" >> arch/arm64/configs/vayu_defconfig
+echo "CONFIG_RT2800USB_UNKNOWN=y" >> arch/arm64/configs/vayu_defconfig
+echo "CONFIG_NL80211_TESTMODE=y" >> arch/arm64/configs/vayu_defconfig
 
 # Start Compiling Kernel
 make_fun "${KERNEL_DEFCONFIG}"
