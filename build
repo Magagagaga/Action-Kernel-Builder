@@ -4,7 +4,6 @@ set -e -x
 
 # Kernel Source
 KERNEL_SOURCE="https://github.com/LineageOS/android_kernel_xiaomi_vayu"
-KERNEL_DEFCONFIG="vayu_defconfig"
 
 # Prebuilt Clang Toolchain (AOSP)
 CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master-kernel-build-2021/clang-r416183b.tar.gz"
@@ -42,27 +41,32 @@ PATH="${WORK}/clang/bin:${WORK}/x64/bin:${WORK}/x32/bin:/bin"
 # Enter Kernel root directory
 cd "${KERNEL_SRC}" || exit 1
 
-# --- АВТОПОИСК И ПРАВКА КОНФИГА ---
-# Ищем vayu_defconfig во всех подпапках arch/arm64/configs
-REAL_CONF_PATH=$(find arch/arm64/configs -name "vayu_defconfig" | head -n 1)
+# --- УМНЫЙ ПОИСК И ПРАВКА КОНФИГА ---
+# Ищем любой файл в конфигах, в названии которого есть "vayu"
+REAL_CONF_PATH=$(find arch/arm64/configs -name "*vayu*" | head -n 1)
 
 if [ -n "$REAL_CONF_PATH" ]; then
-    echo "Нашёл конфиг по пути: $REAL_CONF_PATH"
-    # Добавляем твои настройки для Wi-Fi адаптера
-    sed -i 's/# CONFIG_RT2800USB is not set/CONFIG_RT2800USB=y/g' "$REAL_CONF_PATH"
-    echo "CONFIG_RT2X00=y" >> "$REAL_CONF_PATH"
-    echo "CONFIG_RT2800USB_RT53XX=y" >> "$REAL_CONF_PATH"
-    echo "CONFIG_RT2800USB_UNKNOWN=y" >> "$REAL_CONF_PATH"
-    echo "CONFIG_NL80211_TESTMODE=y" >> "$REAL_CONF_PATH"
+    echo "Нашёл конфиг: $REAL_CONF_PATH"
     
-    # Получаем чистое имя для команды make (убираем путь до configs/)
+    # Включаем твои настройки для Wi-Fi адаптера (для Нетхантера)
+    sed -i 's/# CONFIG_RT2800USB is not set/CONFIG_RT2800USB=y/g' "$REAL_CONF_PATH"
+    {
+        echo "CONFIG_RT2X00=y"
+        echo "CONFIG_RT2800USB_RT53XX=y"
+        echo "CONFIG_RT2800USB_UNKNOWN=y"
+        echo "CONFIG_NL80211_TESTMODE=y"
+    } >> "$REAL_CONF_PATH"
+    
+    # Получаем имя конфига для команды make (убираем путь до папки configs)
     MAKE_CONF=$(echo "$REAL_CONF_PATH" | sed 's|arch/arm64/configs/||')
     
     # Старт компиляции
     make_fun "$MAKE_CONF"
     make_fun -j"$(nproc --all)" 2>&1 | tee build.log
 else
-    echo "ОШИБКА: vayu_defconfig не найден вообще!"
-    find arch/arm64/configs -maxdepth 3
+    echo "ОШИБКА: vayu вообще не найден в конфигах!"
+    ls -R arch/arm64/configs/
+    exit 1
+fi
     exit 1
 fi
